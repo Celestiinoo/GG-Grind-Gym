@@ -1,15 +1,33 @@
-import { useRouter,router } from "expo-router";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { db, auth } from "../firebaseConfig";
 import { collection, addDoc } from "firebase/firestore";
-import { Text, View, TextInput, Button } from "react-native";
+import { Text, View, TextInput, Button, ActivityIndicator } from "react-native";
 
 export default function CriarGrupo() {
   const [name, setName] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>(""); // Formato: YYYY-MM-DD
+  const [endDate, setEndDate] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const isValidDate = (dateStr: string): boolean => {
+    const regex = /^\d{2}-\d{2}-\d{4}$/;
+    if (!regex.test(dateStr)) return false;
+
+    const [day, month, year] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return (
+      date.getFullYear() === year &&
+      date.getMonth() + 1 === month &&
+      date.getDate() === day
+    );
+  };
+
+  const parseDateFromDDMMYYYY = (dateStr: string): string => {
+    const [day, month, year] = dateStr.split('-').map(Number);
+    return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  };
 
   const handleCreateGroup = async () => {
     if (!name || !endDate) {
@@ -17,31 +35,46 @@ export default function CriarGrupo() {
       return;
     }
 
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(endDate)) {
-      setError("Data inválida. Use o formato YYYY-MM-DD");
+    if (!isValidDate(endDate)) {
+      setError("Data inválida. Use o formato DD-MM-YYYY (ex.: 31-12-2025)");
       return;
     }
 
-    setLoading(true);
-    setError(null);
     try {
+      const [day, month, year] = endDate.split('-').map(Number);
+      const inputDate = new Date(year, month - 1, day);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (inputDate < today) {
+        setError("A data não pode ser anterior ao dia atual (28-05-2025)");
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
       const user = auth.currentUser;
       if (!user) {
         throw new Error("Usuário não autenticado");
       }
 
-      await addDoc(collection(db, "GROUPS"), {
+      const isoDate = parseDateFromDDMMYYYY(endDate);
+      const groupData = {
         name,
-        endDate: new Date(endDate).toISOString(),
+        endDate: new Date(isoDate).toISOString(),
         createdBy: user.uid,
         createdAt: new Date().toISOString(),
-        members: [user.uid], // Incluir criador como membro
-      });
+        members: [user.uid],
+      };
 
+      console.log("Criando grupo:", groupData);
+      await addDoc(collection(db, "GROUPS"), groupData);
+      setError("Grupo criado com sucesso");
       router.replace("/home");
     } catch (error: any) {
-      setError(error.message);
+      console.error("Erro ao criar grupo:", error.code, error.message);
+      setError(`Erro: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -60,7 +93,7 @@ export default function CriarGrupo() {
         />
         <TextInput
           className="border border-gray-300 rounded-lg p-3 bg-white text-base"
-          placeholder="Data de término (YYYY-MM-DD)"
+          placeholder="Data de término (DD-MM-YYYY)"
           value={endDate}
           onChangeText={setEndDate}
           keyboardType="numeric"
@@ -73,7 +106,7 @@ export default function CriarGrupo() {
             color="#10b981"
           />
         </View>
-        {loading && <Text className="text-center text-gray-600">Carregando...</Text>}
+        {loading && <ActivityIndicator size="large" color="#0000ff" />}
         {error && <Text className="text-red-500 text-center">{error}</Text>}
       </View>
 

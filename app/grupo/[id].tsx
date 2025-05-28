@@ -42,19 +42,17 @@ export default function Grupo() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
-  // Formata data de YYYY-MM-DD para DD-MM-YYYY
+
   const formatDateToDDMMYYYY = (isoDate: string): string => {
     const date = new Date(isoDate);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${day}-${month}-${year}`;
   };
 
-  // Converte DD-MM-YYYY para YYYY-MM-DD
   const parseDateFromDDMMYYYY = (dateStr: string): string => {
-    const [day, month, year] = dateStr.split('/').map(Number);
+    const [day, month, year] = dateStr.split('-').map(Number);
     return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
   };
 
@@ -145,7 +143,7 @@ export default function Grupo() {
       today.setHours(0, 0, 0, 0);
 
       if (inputDate < today) {
-        setError("A data não pode ser anterior ao dia atual (28-05-2025)");
+        setError("A data não pode ser anterior ao dia atual");
         return;
       }
 

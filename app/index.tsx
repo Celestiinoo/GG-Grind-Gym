@@ -5,14 +5,13 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { Text, View, TextInput, Button } from "react-native";
 
 export default function Index() {
-  // Estados para login
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Função para login
+ 
   const handleLogin = async () => {
     if (!email || !password) {
       setError("Preencha e-mail e senha");
@@ -22,7 +21,7 @@ export default function Index() {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace("/home"); // Redirecionar para Home
+      router.replace("/home");
     } catch (error: any) {
       setError(error.message);
     } finally {

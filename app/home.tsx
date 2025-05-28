@@ -13,7 +13,7 @@ export default function Home() {
     createdBy: string;
     members: string[];
     createdAt: string;
-  }
+  }  
 
   interface Invite {
     id: string;
@@ -23,13 +23,21 @@ export default function Home() {
     invitedBy: string;
     createdAt: string;
   }
-
   const [groups, setGroups] = useState<Group[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const router = useRouter();
+  
+  const formatDateToDDMMYYYY = (isoDate: string): string => {
+    const date = new Date(isoDate);
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${month}-${day}-${year}`;
+  };
+  
 
   const listGroups = async (uid: string): Promise<Group[]> => {
     try {
@@ -236,7 +244,7 @@ export default function Home() {
                   <View>
                     <Text className="text-base font-bold">{group.name}</Text>
                     <Text className="text-sm text-gray-600">
-                      Termina em: {new Date(group.endDate).toLocaleDateString()}
+                      Termina em: {new Date(formatDateToDDMMYYYY(group.endDate)).toLocaleDateString()}
                     </Text>
                   </View>
                   <View className="flex-row space-x-2">

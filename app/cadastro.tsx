@@ -6,7 +6,7 @@ import { setDoc, doc } from "firebase/firestore";
 import { Text, View, TextInput, Button } from "react-native";
 
 export default function Cadastro() {
-  // Estados para cadastro
+
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -14,7 +14,7 @@ export default function Cadastro() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Função para registro
+ 
   const handleSignUp = async () => {
     if (!name || !email || !password) {
       setError("Preencha todos os campos");
@@ -28,7 +28,7 @@ export default function Cadastro() {
         name,
         email,
       });
-      router.replace("/home"); // Redirecionar para Home
+      router.replace("/home");
     } catch (error: any) {
       setError(error.message);
     } finally {
