@@ -2,7 +2,10 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { db, auth } from "../../firebaseConfig";
 import { doc, getDoc, updateDoc, deleteDoc, query, where, getDocs, collection, addDoc } from "firebase/firestore";
-import { Text, View, TextInput, Button, ScrollView, ActivityIndicator } from "react-native";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "../../firebaseConfig";
+import * as ImagePicker from "expo-image-picker";
+import { Text, View, TextInput, Button, ScrollView, ActivityIndicator, Image } from "react-native";
 
 export default function Grupo() {
   interface Group {
@@ -19,14 +22,55 @@ export default function Grupo() {
     email: string;
   }
 
+  interface Photo {
+    id: string;
+    groupId: string;
+    userId: string;
+    url: string;
+    votes: { [uid: string]: boolean };
+    validated: boolean;
+    createdAt: string;
+  }
+
   const [group, setGroup] = useState<Group | null>(null);
   const [newEndDate, setNewEndDate] = useState<string>("");
   const [inviteEmail, setInviteEmail] = useState<string>("");
   const [members, setMembers] = useState<Member[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { id } = useLocalSearchParams();
   const router = useRouter();
+
+  // Formata data de YYYY-MM-DD para DD-MM-YYYY
+  const formatDateToDDMMYYYY = (isoDate: string): string => {
+    const date = new Date(isoDate);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  // Converte DD-MM-YYYY para YYYY-MM-DD
+  const parseDateFromDDMMYYYY = (dateStr: string): string => {
+    const [day, month, year] = dateStr.split('/').map(Number);
+    return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  };
+
+  // Valida data DD-MM-YYYY
+  const isValidDate = (dateStr: string): boolean => {
+    const regex = /^\d{2}-\d{2}-\d{4}$/;
+    if (!regex.test(dateStr)) return false;
+
+    const [day, month, year] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return (
+      date.getFullYear() === year &&
+      date.getMonth() + 1 === month &&
+      date.getDate() === day
+    );
+  };
 
   useEffect(() => {
     const fetchGroup = async () => {
@@ -47,7 +91,7 @@ export default function Grupo() {
 
         const groupData = { id: groupDoc.id, ...groupDoc.data() } as Group;
         setGroup(groupData);
-        setNewEndDate(new Date(groupData.endDate).toISOString().split("T")[0]);
+        setNewEndDate(formatDateToDDMMYYYY(groupData.endDate));
 
         const memberData: Member[] = [];
         for (const memberId of groupData.members) {
@@ -61,9 +105,20 @@ export default function Grupo() {
           }
         }
         setMembers(memberData);
+
+        const photosQuery = query(
+          collection(db, "PHOTOS"),
+          where("groupId", "==", id)
+        );
+        const photosSnapshot = await getDocs(photosQuery);
+        const photosData: Photo[] = [];
+        photosSnapshot.forEach((doc) => {
+          photosData.push({ id: doc.id, ...doc.data() } as Photo);
+        });
+        setPhotos(photosData);
       } catch (err: any) {
-        console.error("Erro ao carregar grupo:", err);
-        setError(err.message);
+        console.error("Erro ao carregar grupo:", err.code, err.message);
+        setError(`Erro: ${err.message}`);
       } finally {
         setLoading(false);
       }
@@ -78,24 +133,36 @@ export default function Grupo() {
       return;
     }
 
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(newEndDate)) {
-      setError("Data inválida. Use o formato YYYY-MM-DD");
+    if (!isValidDate(newEndDate)) {
+      setError("Data inválida. Use o formato DD-MM-YYYY (ex.: 31-12-2025)");
       return;
     }
 
-    setLoading(true);
-    setError(null);
     try {
+      const [day, month, year] = newEndDate.split('-').map(Number);
+      const inputDate = new Date(year, month - 1, day);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (inputDate < today) {
+        setError("A data não pode ser anterior ao dia atual (28-05-2025)");
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
       if (!group) throw new Error("Grupo não carregado");
+
+      const isoDate = parseDateFromDDMMYYYY(newEndDate);
       await updateDoc(doc(db, "GROUPS", group.id), {
-        endDate: new Date(newEndDate).toISOString(),
+        endDate: new Date(isoDate).toISOString(),
       });
-      setGroup({ ...group, endDate: new Date(newEndDate).toISOString() });
+      setGroup({ ...group, endDate: new Date(isoDate).toISOString() });
       setError("Data atualizada com sucesso");
-    } catch (err: any) {
-        console.error("Erro ao atualizar data:", err);
-      setError(err.message);
+    } catch (error: any) {
+      console.error("Erro ao atualizar data:", error.code, error.message);
+      setError(`Erro: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -137,34 +204,22 @@ export default function Grupo() {
         return;
       }
 
-      console.log("Verificando convites existentes para grupo:", group.id, "e usuário:", userId);
-      const invitesQuery = query(
-        collection(db, "INVITES"),
-        where("groupId", "==", group.id),
-        where("invitedUserId", "==", userId)
-      );
-      const inviteSnapshot = await getDocs(invitesQuery);
-      if (!inviteSnapshot.empty) {
-        setError("Convite já enviado");
-        setLoading(false);
-        return;
-      }
-
-      console.log("Criando novo convite...");
-      const inviteDoc = await addDoc(collection(db, "INVITES"), {
-        groupId: group.id,
-        groupName: group.name,
-        invitedUserId: userId,
-        invitedBy: auth.currentUser.uid,
-        createdAt: new Date().toISOString(),
+      const updatedMembers = [...group.members, userId];
+      console.log("Adicionando membro:", userId);
+      await updateDoc(doc(db, "GROUPS", group.id), {
+        members: updatedMembers,
       });
-      console.log("Convite criado com ID:", inviteDoc.id);
 
+      setGroup({ ...group, members: updatedMembers });
+      setMembers([
+        ...members,
+        { id: userId, name: userDoc.data().name, email: userDoc.data().email },
+      ]);
       setInviteEmail("");
-      setError("Convite enviado com sucesso");
+      setError("Usuário adicionado com sucesso");
     } catch (error: any) {
-      console.error("Erro ao enviar convite:", error.code, error.message);
-      setError(error.message);
+      console.error("Erro ao adicionar usuário:", error.code, error.message);
+      setError(`Erro: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -179,25 +234,13 @@ export default function Grupo() {
         throw new Error("Apenas o criador pode excluir o grupo");
       }
 
-      console.log("Excluindo convites para grupo:", group.id);
-      const invitesQuery = query(
-        collection(db, "INVITES"),
-        where("groupId", "==", group.id)
-      );
-      const invitesSnapshot = await getDocs(invitesQuery);
-      const deleteInvitePromises = invitesSnapshot.docs.map(async (docSnap) => {
-        console.log("Deletando convite:", docSnap.id);
-        await deleteDoc(doc(db, "INVITES", docSnap.id));
-      });
-      await Promise.all(deleteInvitePromises);
-
       console.log("Excluindo grupo:", group.id);
       await deleteDoc(doc(db, "GROUPS", group.id));
       setError("Grupo excluído com sucesso");
       router.push("/home");
     } catch (error: any) {
-      console.error("Erro ao excluir grupo:", error);
-      setError(error.message);
+      console.error("Erro ao excluir grupo:", error.code, error.message);
+      setError(`Erro: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -225,33 +268,165 @@ export default function Grupo() {
       setError("Você saiu do grupo com sucesso");
       router.push("/home");
     } catch (error: any) {
-      console.error("Erro ao sair do grupo:", error);
-      setError(error.message);
+      console.error("Erro ao sair do grupo:", error.code, error.message);
+      setError(`Erro: ${error.message}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUploadPhoto = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (!auth.currentUser) throw new Error("Usuário não autenticado");
+      if (!group) throw new Error("Grupo não carregado");
+
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        setError("Permissão para acessar a galeria é necessária");
+        setLoading(false);
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (result.canceled) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(result.assets[0].uri);
+      const blob = await response.blob();
+      const storageRef = ref(storage, `photos/${group.id}/${Date.now()}`);
+      await uploadBytes(storageRef, blob);
+      const url = await getDownloadURL(storageRef);
+
+      console.log("Enviando foto:", url);
+      const photoDoc = await addDoc(collection(db, "PHOTOS"), {
+        groupId: group.id,
+        userId: auth.currentUser.uid,
+        url,
+        votes: {},
+        validated: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      setPhotos([...photos, {
+        id: photoDoc.id,
+        groupId: group.id,
+        userId: auth.currentUser.uid,
+        url,
+        votes: {},
+        validated: false,
+        createdAt: new Date().toISOString(),
+      }]);
+      setError("Foto enviada com sucesso");
+    } catch (error: any) {
+      console.error("Erro ao enviar foto:", error.code, error.message);
+      setError(`Erro: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVote = async (photoId: string, vote: boolean) => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (!auth.currentUser) throw new Error("Usuário não autenticado");
+      if (!group) throw new Error("Grupo não carregado");
+
+      const photoRef = doc(db, "PHOTOS", photoId);
+      const photoDoc = await getDoc(photoRef);
+      if (!photoDoc.exists()) {
+        throw new Error("Foto não encontrada");
+      }
+
+      const photoData = photoDoc.data() as Photo;
+      const updatedVotes = { ...photoData.votes, [auth.currentUser.uid]: vote };
+      const allVoted = group.members.every(uid => updatedVotes[uid] !== undefined);
+      const validated = allVoted && Object.values(updatedVotes).every(v => v);
+
+      console.log("Votando na foto:", photoId, "Voto:", vote);
+      await updateDoc(photoRef, {
+        votes: updatedVotes,
+        validated,
+      });
+
+      setPhotos(photos.map(p =>
+        p.id === photoId ? { ...p, votes: updatedVotes, validated } : p
+      ));
+      setError("Voto registrado");
+    } catch (error: any) {
+      console.error("Erro ao votar:", error.code, error.message);
+      setError(`Erro: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateScores = () => {
+    const scores: { [uid: string]: number } = {};
+    members.forEach(m => { scores[m.id] = 0; });
+    photos.forEach(p => {
+      if (p.validated) {
+        scores[p.userId] = (scores[p.userId] || 0) + 2;
+      }
+    });
+    return scores;
+  };
+
+  const getWinners = () => {
+    if (!group || new Date() < new Date(group.endDate)) return [];
+    const scores = calculateScores();
+    let maxScore = 0;
+    const winners: Member[] = [];
+
+    for (const [uid, score] of Object.entries(scores)) {
+      if (score > maxScore) {
+        maxScore = score;
+        winners.length = 0;
+        const member = members.find(m => m.id === uid);
+        if (member) winners.push(member);
+      } else if (score === maxScore && score > 0) {
+        const member = members.find(m => m.id === uid);
+        if (member) winners.push(member);
+      }
+    }
+
+    return winners;
   };
 
   if (loading || !group) {
     return (
       <View className="flex-1 bg-gray-100 p-5">
         <ActivityIndicator size="large" color="#0000ff" />
-        <Text className="text-2xl font-bold mb-2 text-center">Carregando...</Text>
+        <Text className="text-2xl font-bold mt-2 text-center">Carregando...</Text>
       </View>
     );
   }
 
+  const scores = calculateScores();
+  const winners = getWinners();
+
   return (
     <View className="flex-1 bg-gray-100 p-5">
       <Text className="text-2xl font-bold mb-6">{group.name}</Text>
-      <View className="space-y-4">
-        <View>
+      {error && <Text className="text-red-500 text-center mb-4">{error}</Text>}
+      {loading && <ActivityIndicator size="large" color="#0000ff" />}
+      <ScrollView className="flex-1">
+        <View className="mb-4">
           <Text className="text-base mb-2">
-            Data de término: {new Date(group.endDate).toLocaleDateString()}
+            Data de término: {formatDateToDDMMYYYY(group.endDate)}
           </Text>
           <TextInput
             className="border border-gray-300 rounded-lg p-3 bg-white text-base"
-            placeholder="Nova data (YYYY-MM-DD)"
+            placeholder="Nova data (DD-MM-YYYY)"
             value={newEndDate}
             onChangeText={setNewEndDate}
             keyboardType="numeric"
@@ -265,8 +440,9 @@ export default function Grupo() {
             />
           </View>
         </View>
-        <View>
-          <Text className="text-base mb-2">Convidar usuário</Text>
+
+        <View className="mb-4">
+          <Text className="text-base mb-2">Adicionar Membro</Text>
           <TextInput
             className="border border-gray-300 rounded-lg p-3 bg-white text-base"
             placeholder="E-mail do usuário"
@@ -277,14 +453,15 @@ export default function Grupo() {
           />
           <View className="mt-2">
             <Button
-              title="Convidar"
+              title="Adicionar"
               onPress={handleInvite}
               disabled={loading}
               color="#3b82f6"
             />
           </View>
         </View>
-        <View>
+
+        <View className="mb-4">
           <Text className="text-base font-bold mb-2">Membros</Text>
           {members.length === 0 ? (
             <Text className="text-gray-600">Nenhum membro encontrado.</Text>
@@ -297,14 +474,81 @@ export default function Grupo() {
                 >
                   <Text className="text-base">Nome: {member.name}</Text>
                   <Text className="text-base">Email: {member.email}</Text>
+                  <Text className="text-base">Pontos: {scores[member.id] || 0}</Text>
                 </View>
               ))}
             </ScrollView>
           )}
         </View>
-      </View>
-      {error && <Text className="text-red-500 mt-4 text-center">{error}</Text>}
-      {loading && <ActivityIndicator size="large" color="#0000ff" />}
+
+        <View className="mb-4">
+          <Text className="text-base font-bold mb-2">Enviar Foto</Text>
+          <Button
+            title="Selecionar Foto"
+            onPress={handleUploadPhoto}
+            disabled={loading}
+            color="#10b981"
+          />
+        </View>
+
+        <View className="mb-4">
+          <Text className="text-base font-bold mb-2">Fotos</Text>
+          {photos.length === 0 ? (
+            <Text className="text-gray-600">Nenhuma foto enviada.</Text>
+          ) : (
+            <ScrollView>
+              {photos.map((photo) => (
+                <View
+                  key={photo.id}
+                  className="bg-white p-3 mb-2 rounded-lg border border-gray-200"
+                >
+                  <Image
+                    source={{ uri: photo.url }}
+                    className="w-full h-48 rounded-lg mb-2"
+                    resizeMode="cover"
+                  />
+                  <Text className="text-base">
+                    Enviada por: {members.find(m => m.id === photo.userId)?.name || "Desconhecido"}
+                  </Text>
+                  <Text className="text-base">
+                    Status: {photo.validated ? "Validada" : "Pendente"}
+                  </Text>
+                  <Text className="text-base">
+                    Votos: {Object.keys(photo.votes).length}/{group.members.length}
+                  </Text>
+                  {!photo.validated && !photo.votes[auth.currentUser?.uid || ""] && (
+                    <View className="flex-row mt-2 space-x-2">
+                      <Button
+                        title="Votar Sim"
+                        onPress={() => handleVote(photo.id, true)}
+                        disabled={loading}
+                        color="#10b981"
+                      />
+                      <Button
+                        title="Votar Não"
+                        onPress={() => handleVote(photo.id, false)}
+                        disabled={loading}
+                        color="#ef4444"
+                      />
+                    </View>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+
+        {winners.length > 0 && (
+          <View className="mb-4 p-3 bg-green-100 rounded-lg">
+            <Text className="text-base font-bold text-green-800">
+              {winners.length === 1
+                ? `Vencedor: ${winners[0].name} com ${scores[winners[0].id]} pontos!`
+                : `Empate: ${winners.map(w => w.name).join(", ")} com ${scores[winners[0].id]} pontos!`}
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
       <View className="mt-4 space-y-2">
         {auth.currentUser?.uid === group?.createdBy && (
           <Button
