@@ -5,7 +5,8 @@ import { doc, getDoc, updateDoc, deleteDoc, query, where, getDocs, collection, a
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../firebaseConfig";
 import * as ImagePicker from "expo-image-picker";
-import { Text, View, TextInput, Button, ScrollView, ActivityIndicator, Image } from "react-native";
+import { Text, View, TextInput, Button, ScrollView, ActivityIndicator, Image, TouchableOpacity } from "react-native";
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Grupo() {
   interface Group {
@@ -41,6 +42,7 @@ export default function Grupo() {
   const [error, setError] = useState<string | null>(null);
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const isLeaveButtonDisabled = loading || auth.currentUser?.uid === group?.createdBy;
 
 
   const formatDateToDDMMYYYY = (isoDate: string): string => {
@@ -360,6 +362,10 @@ export default function Grupo() {
         p.id === photoId ? { ...p, votes: updatedVotes, validated } : p
       ));
       setError("Voto registrado");
+
+      setTimeout(() => {
+      setError(null); 
+    }, 5000);
     } catch (error: any) {
       console.error("Erro ao votar:", error.code, error.message);
       setError(`Erro: ${error.message}`);
@@ -413,84 +419,93 @@ export default function Grupo() {
   const winners = getWinners();
 
   return (
-    <View className="flex-1 bg-gray-100 p-5">
-      <Text className="text-2xl font-bold mb-6">{group.name}</Text>
+    <View className="flex-1 bg-slate-950">
+      <View className="">
+      <Text className="px-5 mt-2 text-3xl font-bold mb-4 text-[#f47020]" style = {{ fontFamily: 'sans-serif' }}>{group.name} 🏆</Text>
+      </View>
+      <LinearGradient
+        colors={['#9333EA', '#DB2777']} // Roxo -> Rosa (exemplo)
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={{ height: 4 }} // Altura da borda
+      />
       {error && <Text className="text-red-500 text-center mb-4">{error}</Text>}
       {loading && <ActivityIndicator size="large" color="#0000ff" />}
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1 p-5">
         <View className="mb-4">
-          <Text className="text-base mb-2">
-            Data de término: {formatDateToDDMMYYYY(group.endDate)}
+          <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>
+            Data de término: <Text className="text-white">{formatDateToDDMMYYYY(group.endDate)}</Text>
           </Text>
+          <View className="p-5 rounded-xl border-2 border-[#9333EA]">
           <TextInput
-            className="border border-gray-300 rounded-lg p-3 bg-white text-base"
+            className="border border-gray-500 rounded-lg p-3 text-white text-base"
             placeholder="Nova data (DD-MM-YYYY)"
             value={newEndDate}
             onChangeText={setNewEndDate}
             keyboardType="numeric"
-          />
-          <View className="mt-2">
-            <Button
-              title="Atualizar Data"
-              onPress={handleUpdateEndDate}
-              disabled={loading}
-              color="#10b981"
             />
+          <View className="mt-4">
+            <TouchableOpacity disabled={loading} onPress={handleUpdateEndDate} className="p-3 
+            bg-gradient-to-r from-[#f47020]  to-[#9333EA] rounded-xl">
+              <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Atualizar Data</Text>
+            </TouchableOpacity>
+            </View>
           </View>
         </View>
 
         <View className="mb-4">
-          <Text className="text-base mb-2">Adicionar Membro</Text>
+          <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>Adicionar Membro</Text>
+          <View className="p-5 rounded-xl border-2 border-[#9333EA]">
           <TextInput
-            className="border border-gray-300 rounded-lg p-3 bg-white text-base"
+            className="border border-gray-500 rounded-lg p-3 text-white text-base"
             placeholder="E-mail do usuário"
             value={inviteEmail}
             onChangeText={setInviteEmail}
             keyboardType="email-address"
             autoCapitalize="none"
-          />
-          <View className="mt-2">
-            <Button
-              title="Adicionar"
-              onPress={handleInvite}
-              disabled={loading}
-              color="#3b82f6"
             />
+          <View className="mt-4">
+            <TouchableOpacity disabled={loading} onPress={handleInvite} className="p-3 
+            bg-gradient-to-r from-[#f47020]  to-[#9333EA] rounded-xl">
+              <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Adicionar</Text>
+            </TouchableOpacity>
+            </View>
           </View>
         </View>
 
         <View className="mb-4">
-          <Text className="text-base font-bold mb-2">Membros</Text>
+          <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>Membros</Text>
+          <View className="p-2 rounded-xl border-2 border-[#9333EA]">
+
           {members.length === 0 ? (
             <Text className="text-gray-600">Nenhum membro encontrado.</Text>
           ) : (
-            <ScrollView className="max-h-40">
+            <ScrollView className="max-h-96">
               {members.map((member) => (
                 <View
-                  key={member.id}
-                  className="bg-white p-3 mb-2 rounded-lg border border-gray-200"
+                key={member.id}
+                className="p-3 mb-2 rounded-lg border border-[#f47020]"
                 >
-                  <Text className="text-base">Nome: {member.name}</Text>
-                  <Text className="text-base">Email: {member.email}</Text>
-                  <Text className="text-base">Pontos: {scores[member.id] || 0}</Text>
+                  <Text className="text-base text-white font-bold" style = {{ fontFamily: 'sans-serif' }}>Nome: {member.name}</Text>
+                  <Text className="text-base text-white font-bold" style = {{ fontFamily: 'sans-serif' }}>Email: {member.email}</Text>
+                  <Text className="text-base text-green-500 font-bold" style = {{ fontFamily: 'sans-serif' }}>Pontos:<Text className="text-green-500"> {scores[member.id] || 0}</Text> </Text>
                 </View>
               ))}
             </ScrollView>
           )}
+          </View>
         </View>
 
         <View className="mb-4">
-          <Text className="text-base font-bold mb-2">Enviar Foto</Text>
-          <Button
-            title="Selecionar Foto"
-            onPress={handleUploadPhoto}
-            disabled={loading}
-            color="#10b981"
-          />
+          <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>Enviar Foto</Text>
+          <TouchableOpacity disabled={loading} onPress={handleUploadPhoto} className="p-3 
+            bg-gradient-to-r from-[#f47020]  to-[#9333EA] rounded-xl">
+              <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Selecionar Foto</Text>
+            </TouchableOpacity>
         </View>
 
         <View className="mb-4">
-          <Text className="text-base font-bold mb-2">Fotos</Text>
+          <Text className="text-lg mb-2 text-[#a740c1] font-bold">Fotos</Text>
           {photos.length === 0 ? (
             <Text className="text-gray-600">Nenhuma foto enviada.</Text>
           ) : (
@@ -498,36 +513,32 @@ export default function Grupo() {
               {photos.map((photo) => (
                 <View
                   key={photo.id}
-                  className="bg-white p-3 mb-2 rounded-lg border border-gray-200"
+                  className="p-3 mb-2 rounded-lg border-2 border-[#f47020]"
                 >
                   <Image
                     source={{ uri: photo.url }}
-                    className="w-full h-48 rounded-lg mb-2"
+                    className="w-full h-48 rounded-lg border-2 border-[#a740c1] mb-2"
                     resizeMode="cover"
                   />
-                  <Text className="text-base">
+                  <Text className="text-base text-white font-bold" style = {{ fontFamily: 'sans-serif' }}>
                     Enviada por: {members.find(m => m.id === photo.userId)?.name || "Desconhecido"}
                   </Text>
-                  <Text className="text-base">
+                  <Text className="text-base text-white font-bold" style = {{ fontFamily: 'sans-serif' }}>
                     Status: {photo.validated ? "Validada" : "Pendente"}
                   </Text>
-                  <Text className="text-base">
+                  <Text className="text-base text-green-500 font-bold" style = {{ fontFamily: 'sans-serif' }}>
                     Votos: {Object.keys(photo.votes).length}/{group.members.length}
                   </Text>
                   {!photo.validated && !photo.votes[auth.currentUser?.uid || ""] && (
                     <View className="flex-row mt-2 space-x-2">
-                      <Button
-                        title="Votar Sim"
-                        onPress={() => handleVote(photo.id, true)}
-                        disabled={loading}
-                        color="#10b981"
-                      />
-                      <Button
-                        title="Votar Não"
-                        onPress={() => handleVote(photo.id, false)}
-                        disabled={loading}
-                        color="#ef4444"
-                      />
+                      <TouchableOpacity disabled={loading} onPress={() => handleVote(photo.id, true)} className="p-3 
+            bg-green-500 rounded-md">
+              <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Votar SIM</Text>
+            </TouchableOpacity>
+                      <TouchableOpacity disabled={loading} onPress={() => handleVote(photo.id, false)} className="p-3 
+            bg-red-500 rounded-md">
+              <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Votar NÃO</Text>
+            </TouchableOpacity>
                     </View>
                   )}
                 </View>
@@ -537,7 +548,7 @@ export default function Grupo() {
         </View>
 
         {winners.length > 0 && (
-          <View className="mb-4 p-3 bg-green-100 rounded-lg">
+          <View className="mb-4 p-3 bg-green-100 rounded-lg border-">
             <Text className="text-base font-bold text-green-800">
               {winners.length === 1
                 ? `Vencedor: ${winners[0].name} com ${scores[winners[0].id]} pontos!`
@@ -547,27 +558,22 @@ export default function Grupo() {
         )}
       </ScrollView>
 
-      <View className="mt-4 space-y-2">
+      <View className="mt-4 space-y-2 p-4">
         {auth.currentUser?.uid === group?.createdBy && (
-          <Button
-            title="Excluir Grupo"
-            onPress={handleDeleteGroup}
-            disabled={loading}
-            color="#dc2626"
-          />
+          <TouchableOpacity disabled={loading} onPress={handleDeleteGroup} className="p-1 
+            bg-red-500 rounded-md">
+              <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Excluir grupo</Text>
+            </TouchableOpacity>
         )}
-        <Button
-          title="Sair do Grupo"
-          onPress={handleLeaveGroup}
-          disabled={loading || auth.currentUser?.uid === group?.createdBy}
-          color="#f97316"
-        />
-        <Button
-          title="Voltar"
-          onPress={() => router.push("/home")}
-          disabled={loading}
-          color="#ef4444"
-        />
+        <View>
+          <TouchableOpacity disabled={loading || auth.currentUser?.uid === group?.createdBy}  onPress={handleLeaveGroup} className={`p-1 rounded-md ${isLeaveButtonDisabled ? 'bg-gray-500' : 'bg-[#f97316]'}`}>
+              <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Sair do Grupo</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity disabled={loading || auth.currentUser?.uid === group?.createdBy}  onPress={() => router.push("/home")} className="p-1 
+            bg-[#ef4444] rounded-md">
+              <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Voltar</Text>
+            </TouchableOpacity>
       </View>
     </View>
   );
