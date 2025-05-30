@@ -76,6 +76,9 @@ export default function Grupo() {
     const fetchGroup = async () => {
       if (!id || typeof id !== "string") {
         setError("ID do grupo inválido");
+        setTimeout(() => {
+        setError(null); 
+     }, 5000);
         setLoading(false);
         return;
       }
@@ -85,6 +88,9 @@ export default function Grupo() {
         const groupDoc = await getDoc(doc(db, "GROUPS", id));
         if (!groupDoc.exists()) {
           setError("Grupo não encontrado");
+          setTimeout(() => {
+        setError(null); 
+      }, 5000);
           setLoading(false);
           return;
         }
@@ -119,6 +125,9 @@ export default function Grupo() {
       } catch (err: any) {
         console.error("Erro ao carregar grupo:", err.code, err.message);
         setError(`Erro: ${err.message}`);
+        setTimeout(() => {
+      setError(null); 
+    }, 5000);
       } finally {
         setLoading(false);
       }
@@ -130,11 +139,17 @@ export default function Grupo() {
   const handleUpdateEndDate = async () => {
     if (!newEndDate) {
       setError("Preencha a data");
+      setTimeout(() => {
+      setError(null); 
+    }, 5000);
       return;
     }
 
     if (!isValidDate(newEndDate)) {
       setError("Data inválida. Use o formato DD-MM-YYYY (ex.: 31-12-2025)");
+      setTimeout(() => {
+      setError(null); 
+    }, 5000);
       return;
     }
 
@@ -146,6 +161,9 @@ export default function Grupo() {
 
       if (inputDate < today) {
         setError("A data não pode ser anterior ao dia atual");
+        setTimeout(() => {
+      setError(null); 
+      }, 5000);
         return;
       }
 
@@ -160,9 +178,15 @@ export default function Grupo() {
       });
       setGroup({ ...group, endDate: new Date(isoDate).toISOString() });
       setError("Data atualizada com sucesso");
+      setTimeout(() => {
+      setError(null); 
+    }, 5000);
     } catch (error: any) {
       console.error("Erro ao atualizar data:", error.code, error.message);
       setError(`Erro: ${error.message}`);
+      setTimeout(() => {
+      setError(null); 
+    }, 5000);
     } finally {
       setLoading(false);
     }
@@ -171,6 +195,9 @@ export default function Grupo() {
   const handleInvite = async () => {
     if (!inviteEmail) {
       setError("Preencha o e-mail");
+      setTimeout(() => {
+      setError(null); 
+    }, 5000);
       return;
     }
 
@@ -190,6 +217,9 @@ export default function Grupo() {
 
       if (querySnapshot.empty) {
         setError("Usuário não encontrado");
+        setTimeout(() => {
+      setError(null); 
+      }, 5000);
         setLoading(false);
         return;
       }
@@ -200,6 +230,9 @@ export default function Grupo() {
 
       if (group.members.includes(userId)) {
         setError("Usuário já é membro");
+        setTimeout(() => {
+        setError(null); 
+      }, 5000);
         setLoading(false);
         return;
       }
@@ -217,9 +250,15 @@ export default function Grupo() {
       ]);
       setInviteEmail("");
       setError("Usuário adicionado com sucesso");
+      setTimeout(() => {
+      setError(null); 
+    }, 5000);
     } catch (error: any) {
       console.error("Erro ao adicionar usuário:", error.code, error.message);
       setError(`Erro: ${error.message}`);
+      setTimeout(() => {
+      setError(null); 
+    }, 5000);
     } finally {
       setLoading(false);
     }
@@ -241,6 +280,9 @@ export default function Grupo() {
     } catch (error: any) {
       console.error("Erro ao excluir grupo:", error.code, error.message);
       setError(`Erro: ${error.message}`);
+      setTimeout(() => {
+      setError(null); 
+    }, 5000);
     } finally {
       setLoading(false);
     }
@@ -266,6 +308,9 @@ export default function Grupo() {
       setGroup({ ...group, members: updatedMembers });
       setMembers(members.filter((m) => m.id !== auth.currentUser!.uid));
       setError("Você saiu do grupo com sucesso");
+      setTimeout(() => {
+      setError(null); 
+      }, 5000);
       router.push("/home");
     } catch (error: any) {
       console.error("Erro ao sair do grupo:", error.code, error.message);
@@ -285,6 +330,9 @@ export default function Grupo() {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
         setError("Permissão para acessar a galeria é necessária");
+        setTimeout(() => {
+      setError(null); 
+      }, 5000);
         setLoading(false);
         return;
       }
@@ -424,17 +472,17 @@ export default function Grupo() {
       <Text className="px-5 mt-2 text-3xl font-bold mb-4 text-[#f47020]" style = {{ fontFamily: 'sans-serif' }}>{group.name} 🏆</Text>
       </View>
       <LinearGradient
-        colors={['#9333EA', '#DB2777']} // Roxo -> Rosa (exemplo)
+        colors={['#9333EA', '#DB2777']} 
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={{ height: 4 }} // Altura da borda
+        style={{ height: 4 }} 
       />
       {error && <Text className="text-red-500 text-center mb-4">{error}</Text>}
       {loading && <ActivityIndicator size="large" color="#0000ff" />}
       <ScrollView className="flex-1 p-5">
         <View className="mb-4">
           <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>
-            Data de término: <Text className="text-white">{formatDateToDDMMYYYY(group.endDate)}</Text>
+            Data de término 📅: <Text className="text-white">{formatDateToDDMMYYYY(group.endDate)}</Text>
           </Text>
           <View className="p-5 rounded-xl border-2 border-[#9333EA]">
           <TextInput
@@ -454,7 +502,7 @@ export default function Grupo() {
         </View>
 
         <View className="mb-4">
-          <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>Adicionar Membro</Text>
+          <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>Adicionar Membro ➕</Text>
           <View className="p-5 rounded-xl border-2 border-[#9333EA]">
           <TextInput
             className="border border-gray-500 rounded-lg p-3 text-white text-base"
@@ -474,7 +522,7 @@ export default function Grupo() {
         </View>
 
         <View className="mb-4">
-          <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>Membros</Text>
+          <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>Membros 👥</Text>
           <View className="p-2 rounded-xl border-2 border-[#9333EA]">
 
           {members.length === 0 ? (
@@ -497,7 +545,7 @@ export default function Grupo() {
         </View>
 
         <View className="mb-4">
-          <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>Enviar Foto</Text>
+          <Text className="text-lg mb-2 text-[#a740c1] font-bold" style = {{ fontFamily: 'sans-serif' }}>Enviar Foto 📥</Text>
           <TouchableOpacity disabled={loading} onPress={handleUploadPhoto} className="p-3 
             bg-gradient-to-r from-[#f47020]  to-[#9333EA] rounded-xl">
               <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Selecionar Foto</Text>
@@ -505,7 +553,7 @@ export default function Grupo() {
         </View>
 
         <View className="mb-4">
-          <Text className="text-lg mb-2 text-[#a740c1] font-bold">Fotos</Text>
+          <Text className="text-lg mb-2 text-[#a740c1] font-bold">Fotos 📷</Text>
           {photos.length === 0 ? (
             <Text className="text-gray-600">Nenhuma foto enviada.</Text>
           ) : (
@@ -551,7 +599,7 @@ export default function Grupo() {
           <View className="mb-4 p-3 bg-green-100 rounded-lg border-">
             <Text className="text-base font-bold text-green-800">
               {winners.length === 1
-                ? `Vencedor: ${winners[0].name} com ${scores[winners[0].id]} pontos!`
+                ? ` Vencedor: ${winners[0].name} 🏆 com ${scores[winners[0].id]} pontos!`
                 : `Empate: ${winners.map(w => w.name).join(", ")} com ${scores[winners[0].id]} pontos!`}
             </Text>
           </View>
