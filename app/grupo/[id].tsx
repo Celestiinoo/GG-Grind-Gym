@@ -408,9 +408,9 @@ export default function Grupo() {
 
   if (loading || !group) {
     return (
-      <View className="flex-1 bg-gray-100 p-5">
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text className="text-2xl font-bold mt-2 text-center">Carregando...</Text>
+      <View className="flex-1 bg-slate-950 p-5">
+        <ActivityIndicator size="large" color="#9333EA" />
+        <Text className="text-2xl font-bold mt-2 text-center text-[#f47020]">Carregando...</Text>
       </View>
     );
   }
@@ -570,7 +570,7 @@ export default function Grupo() {
               <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Sair do Grupo</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity disabled={loading || auth.currentUser?.uid === group?.createdBy}  onPress={() => router.push("/home")} className="p-1 
+          <TouchableOpacity onPress={() => router.push("../home")} className="p-1 
             bg-[#ef4444] rounded-md">
               <Text style = {{ fontFamily: 'sans-serif' }} className="self-center font-bold text-white text-lg">Voltar</Text>
             </TouchableOpacity>
