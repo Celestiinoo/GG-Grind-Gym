@@ -221,7 +221,8 @@ export default function Home() {
 
   return (
     <View className="flex-1 bg-slate-950 p-5">
-      <Text className="text-2xl font-bold mb-6 text-white">Bem-vindo, <Text className="bg-gradient-to-r from-[#f47020] to-[#9333EA] inline-block text-transparent bg-clip-text font-extrabold">{userName}!</Text></Text>
+      <Text className="text-2xl font-bold mb-1 text-white">Bem-vindo, <Text className="bg-gradient-to-r from-[#f47020] to-[#9333EA] inline-block text-transparent bg-clip-text font-extrabold">{userName}!</Text></Text>
+      <Text className="mb-6 text-gray-500 font-semibold">Transforme seus exercicios em conquistas. 🏅</Text>
       {loading && <ActivityIndicator size="large" color="#0000ff" />}
       {error && <Text className="text-red-500 text-center">{error}</Text>}
       {!loading && (
@@ -289,7 +290,7 @@ export default function Home() {
           )}
         </>
       )}
-      <View className="mt-4 space-y-2">
+      <View className="mt-4 space-y-2 fixed bottom-0 left-0 right-0 p-5">
         <TouchableOpacity
           className="bg-gradient-to-r from-[#f47020]  to-[#9333EA] p-2 rounded"
           onPress={() => router.push("/criar-grupo")}

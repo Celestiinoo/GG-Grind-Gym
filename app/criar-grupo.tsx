@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { db, auth } from "../firebaseConfig";
 import { collection, addDoc } from "firebase/firestore";
-import { Text, View, TextInput, Button, ActivityIndicator } from "react-native";
+import { Text, View, TextInput, Button, ActivityIndicator, TouchableOpacity } from "react-native";
 
 export default function CriarGrupo() {
   const [name, setName] = useState<string>("");
@@ -81,30 +81,33 @@ export default function CriarGrupo() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center bg-gray-100 p-5">
-      <Text className="text-2xl font-bold mb-6">Criar Novo Grupo</Text>
+    <View className="flex-1 items-center justify-center bg-slate-950 p-5">
+      <Text className="text-2xl font-bold mb-6 text-white">Criar Novo Grupo</Text>
 
       <View className="w-full space-y-4">
         <TextInput
-          className="border border-gray-300 rounded-lg p-3 bg-white text-base"
+          className="border border-gray-300 rounded-lg p-3 text-white text-base"
           placeholder="Nome do grupo"
           value={name}
           onChangeText={setName}
         />
         <TextInput
-          className="border border-gray-300 rounded-lg p-3 bg-white text-base"
+          className="border border-gray-300 rounded-lg p-3 text-white text-base"
           placeholder="Data de término (DD-MM-YYYY)"
           value={endDate}
           onChangeText={setEndDate}
           keyboardType="numeric"
         />
         <View className="mt-2">
-          <Button
-            title="Criar Grupo"
-            onPress={handleCreateGroup}
-            disabled={loading}
-            color="#10b981"
-          />
+
+          <TouchableOpacity
+          className="bg-gradient-to-r from-[#f47020] to-[#9333EA] p-2 rounded"
+          onPress={handleCreateGroup}
+          disabled={loading}>
+
+            <Text className="text-white p-1 text-center font-bold text-lg">Criar Grupo</Text>
+          </TouchableOpacity>
+         
         </View>
         {loading && <ActivityIndicator size="large" color="#0000ff" />}
         {error && <Text className="text-red-500 text-center">{error}</Text>}
