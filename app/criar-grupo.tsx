@@ -47,7 +47,7 @@ export default function CriarGrupo() {
       today.setHours(0, 0, 0, 0);
 
       if (inputDate < today) {
-        setError("A data não pode ser anterior ao dia atual (28-05-2025)");
+        setError("A data não pode ser anterior ao dia atual");
         return;
       }
 
